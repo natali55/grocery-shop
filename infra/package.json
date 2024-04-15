@@ -9,7 +9,8 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "deploy": "cdk synth && cdk deploy",
+    "deploy": "npm run build && cdk synth && cdk deploy --all",
+    "invalidate": "aws cloudfront create-invalidation --distribution-id E1798PE220MWUQ --paths '/resources/*'",
     "destroy": "cdk destroy"
   },
   "devDependencies": {
