@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import "source-map-support/register";
 import { App, DefaultStackSynthesizer, Stack } from "aws-cdk-lib";
+import { DbStack } from '../lib/db-stack';
 import { DeployWebAppStack } from "../lib/deploy-web-app-stack";
 import { ProductServiceStack } from '../lib/product-service-stack';
 
@@ -18,5 +19,6 @@ new DeployWebAppStack(app, "DeployWebAppStack", {
     /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
 });
 
-new ProductServiceStack(app, "ProductServiceStack", {})
+const productServiceStack = new ProductServiceStack(app, "ProductServiceStack", {});
+new DbStack(app, "DbStack", {}, productServiceStack.lambdaProductsList);
 

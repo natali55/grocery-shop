@@ -4,12 +4,15 @@ import { NodejsFunction, SourceMapMode } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import * as path from 'path';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { productsTableName, stockTableName } from '../environments/env';
 
 export class ProductServiceStack extends Stack {
+  public lambdaProductsList: NodejsFunction;
+
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    const lambdaProductsList = new NodejsFunction(this, 'lambda-products-list', {
+    this.lambdaProductsList = new NodejsFunction(this, 'lambda-products-list', {
       functionName: 'getProductsList',
       entry: path.resolve(__dirname, '../src/product-service/get-products-list.ts'),
       runtime: lambda.Runtime.NODEJS_18_X,
@@ -18,6 +21,10 @@ export class ProductServiceStack extends Stack {
       handler: 'getProductsList',
       bundling: {
         target: 'esnext'
+      },
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTableName,
+        STOCK_TABLE_NAME: stockTableName
       }
     });
 
@@ -39,7 +46,7 @@ export class ProductServiceStack extends Stack {
       description: "This Products-API serves the Lambda functions."
     });
 
-    const productsFromLambdaIntegration = new LambdaIntegration(lambdaProductsList, {
+    const productsFromLambdaIntegration = new LambdaIntegration(this.lambdaProductsList, {
 
       integrationResponses: [
         {
