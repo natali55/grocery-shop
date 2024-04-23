@@ -18,8 +18,21 @@ const stockTableName: string = process.env.STOCK_TABLE_NAME as string;
 
 export const createProduct: Handler = async (event: { body: string }) => {
     try {
-        console.log('event', event);
+        console.log('Create product event:', event);
+
         const product = JSON.parse(event.body);
+
+        if (
+            !product.title ||
+            !product.description ||
+            !product.price
+        ) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ message: 'Wrong product format' }),
+            }
+        }
+
         const productId: string = product.id || v4();
         const productPutCommand = new PutItemCommand({
             TableName: productsTableName,
