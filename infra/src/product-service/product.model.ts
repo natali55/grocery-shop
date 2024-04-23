@@ -4,7 +4,7 @@ export interface ProductBase {
     description: string;
 }
 
-export interface ProductBaseWithId {
+export interface ProductBaseWithId extends ProductBase{
     id: string;
 }
 

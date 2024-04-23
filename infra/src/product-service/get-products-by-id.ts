@@ -32,7 +32,7 @@ export const getProductsById = async (event: {productId: string}) => {
 
         const stockCommand = new GetItemCommand({
             TableName: stockTableName,
-            Key: { id: { S: event.productId } }
+            Key: { product_id: { S: event.productId } }
         });
         const stockItemRaw = await dynamoDB.send(stockCommand);
         console.log('Read Stock succeeded:', JSON.stringify(stockItemRaw, null, 2));

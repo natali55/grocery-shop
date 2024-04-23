@@ -20,5 +20,5 @@ new DeployWebAppStack(app, "DeployWebAppStack", {
 });
 
 const productServiceStack = new ProductServiceStack(app, "ProductServiceStack", {});
-new DbStack(app, "DbStack", {}, productServiceStack.lambdaProductsList);
+new DbStack(app, "DbStack", {}, productServiceStack.lambdaFunctions);
 
