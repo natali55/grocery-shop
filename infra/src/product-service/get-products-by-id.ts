@@ -5,13 +5,15 @@ const dynamoDB: DynamoDBClient = new DynamoDBClient({ region: process.env.AWS_RE
 const productsTableName: string = process.env.PRODUCTS_TABLE_NAME as string;
 const stockTableName: string = process.env.STOCK_TABLE_NAME as string;
 
-export const getProductsById = async (event: {productId: string}) => {
+export const getProductsById = async (event: { pathParameters: { product_id: string } }) => {
     // const productById: any = products.find((product: any) => product.id === event.productId)
 
     try {
+        const productId = event.pathParameters.product_id;
+
         const productCommand = new GetItemCommand({
             TableName: productsTableName,
-            Key: { id: { S: event.productId } },
+            Key: { id: { S: productId } },
         });
         const productRaw = await dynamoDB.send(productCommand);
 
@@ -32,7 +34,7 @@ export const getProductsById = async (event: {productId: string}) => {
 
         const stockCommand = new GetItemCommand({
             TableName: stockTableName,
-            Key: { product_id: { S: event.productId } }
+            Key: { product_id: { S: productId } }
         });
         const stockItemRaw = await dynamoDB.send(stockCommand);
         console.log('Read Stock succeeded:', JSON.stringify(stockItemRaw, null, 2));
@@ -41,18 +43,15 @@ export const getProductsById = async (event: {productId: string}) => {
             return new Error('Stock item not found');
         }
 
-        const stockItem = {
-            product_id: stockItemRaw.Item.product_id.S,
-            count: Number(stockItemRaw.Item.count.N)
-        };
+        const stockItemCount =  Number(stockItemRaw.Item.count.N);
 
-        if (stockItem.count === 0) {
+        if (stockItemCount === 0) {
             return new Error('Product is out of stock');
         }
 
         return {
             statusCode: 200,
-            body: JSON.stringify({...product, count: stockItem.count})
+            body: JSON.stringify({...product, count: stockItemCount})
         };
 
     } catch (error) {

@@ -25,7 +25,7 @@ export const createProduct: Handler = async (event: { body: string }) => {
         if (
             !product.title ||
             !product.description ||
-            !product.price
+            !product.price || !product.count
         ) {
             return {
                 statusCode: 400,
@@ -33,7 +33,7 @@ export const createProduct: Handler = async (event: { body: string }) => {
             }
         }
 
-        const productId: string = product.id || v4();
+        const productId: string = v4();
         const productPutCommand = new PutItemCommand({
             TableName: productsTableName,
             Item: {
@@ -46,45 +46,22 @@ export const createProduct: Handler = async (event: { body: string }) => {
 
         const productOutput = await dynamoDB.send(productPutCommand);
 
-        const stockCommand = new GetItemCommand({
+        console.log("Products updated", productOutput);
+
+
+        const stockUpdateCommand = new PutItemCommand({
             TableName: stockTableName,
-            Key: { product_id: { S: productId } }
+            Item: { product_id: { S: productId }, count: { N: product.count.toString() } }
         });
-        const stockItemRaw = await dynamoDB.send(stockCommand);
 
-        let stockUpdateCommand: UpdateItemCommand | PutItemCommand;
-        let stockOutput: PutItemCommandOutput | UpdateItemCommandOutput;
+        const stockOutput = await dynamoDB.send(stockUpdateCommand);
 
-        if (stockItemRaw.Item) {
-            stockUpdateCommand = new UpdateItemCommand({
-                TableName: stockTableName,
-                Key: { product_id: { S: productId } },
-                ExpressionAttributeNames: {
-                    '#C': 'count',
-                },
-                ExpressionAttributeValues: {
-                    ':inc': { N: '1' },
-                },
-                UpdateExpression: 'ADD #C :inc',
-                ReturnValues: 'UPDATED_NEW'
-            });
-
-            stockOutput = await dynamoDB.send(stockUpdateCommand);
-
-        } else {
-           stockUpdateCommand = new PutItemCommand({
-                TableName: stockTableName,
-                Item: { product_id: { S: productId }, count: { N: '1'} }
-            });
-
-            stockOutput = await dynamoDB.send(stockUpdateCommand);
-        }
 
         console.log("Stock updated", stockOutput);
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ message: 'Product is created'} )
+            body: JSON.stringify(product)
         };
 
     } catch (error) {

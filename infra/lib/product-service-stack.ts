@@ -88,7 +88,7 @@ export class ProductServiceStack extends Stack {
           }
         }
       ],
-      proxy: false,
+      proxy: false
     });
 
     // Create a resource /products and GET request under it
@@ -127,7 +127,14 @@ export class ProductServiceStack extends Stack {
           }
         }
       ],
-      proxy: false,
+      requestTemplates: {
+        'application/json': JSON.stringify({
+          pathParameters: {
+            product_id: "$input.params('product_id')"
+          }
+        })
+      },
+      proxy: false
     });
 
     const productByIdResource = productsResource.addResource('{product_id}')
@@ -150,7 +157,6 @@ export class ProductServiceStack extends Stack {
     });
 
     const createProductFromLambdaIntegration = new LambdaIntegration(lambdaCreateProduct, {
-
       integrationResponses: [
         {
           statusCode: '200',
@@ -159,13 +165,13 @@ export class ProductServiceStack extends Stack {
             'method.response.header.Access-Control-Allow-Origin': "'https://d2ju856t2gddwd.cloudfront.net'",
             'method.response.header.Access-Control-Allow-Credentials': "'true'",
             'method.response.header.Access-Control-Allow-Methods': "'OPTIONS,GET,PUT,POST,DELETE'",
+          },
+          responseTemplates: {
+            'application/json': "$util.parseJson($input.json('$.body'))" // Parse the body of the response
           }
         }
       ],
-      requestTemplates: {
-        'application/json': `{"body": $input.json('$')}`
-      },
-      proxy: false,
+      proxy: false
     });
 
     // attach a POST method which pass request to our Lambda function
