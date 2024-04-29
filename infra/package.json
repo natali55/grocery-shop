@@ -11,7 +11,10 @@
     "cdk": "cdk",
     "deploy": "npm run build && cdk synth && cdk deploy --all",
     "invalidate": "aws cloudfront create-invalidation --distribution-id E1798PE220MWUQ --paths '/resources/*'",
-    "destroy": "cdk destroy"
+    "destroy": "cdk destroy",
+    "papulate-table": "node src/product-service/populate-table.js",
+    "scan-products-table": "aws dynamodb scan --table-name Products",
+    "scan-stock-table": "aws dynamodb scan --table-name Stock"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.137",
@@ -24,8 +27,13 @@
     "typescript": "~5.4.3"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.556.0",
+    "@types/uuid": "^9.0.8",
     "aws-cdk-lib": "2.135.0",
+    "aws-lambda": "^1.0.7",
     "constructs": "^10.0.0",
-    "source-map-support": "^0.5.21"
+    "csv-parser": "^3.0.0",
+    "source-map-support": "^0.5.21",
+    "uuid": "^9.0.1"
   }
 }
