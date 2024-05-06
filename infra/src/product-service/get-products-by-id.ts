@@ -1,5 +1,4 @@
 import { DynamoDBClient, GetItemCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
-import { products } from './products';
 
 const dynamoDB: DynamoDBClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 const productsTableName: string = process.env.PRODUCTS_TABLE_NAME as string;

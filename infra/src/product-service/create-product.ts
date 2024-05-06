@@ -1,26 +1,21 @@
 import {
-    DynamoDB,
     DynamoDBClient,
-    GetItemCommand,
-    PutItemCommand,
-    PutItemCommandOutput,
-    ScanCommand,
-    UpdateItemCommand, UpdateItemCommandOutput
+    PutItemCommand
 } from '@aws-sdk/client-dynamodb';
 import { Handler } from 'aws-lambda';
 import { v4 } from 'uuid';
-import { ProductBase, ProductBaseWithId } from './product.model';
+import { Product } from './product.model';
 
 const dynamoDB: DynamoDBClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 const productsTableName: string = process.env.PRODUCTS_TABLE_NAME as string;
 const stockTableName: string = process.env.STOCK_TABLE_NAME as string;
 
 
-export const createProduct: Handler = async (event: { body: string }) => {
+export const createProduct: Handler = async (event: Product) => {
     try {
         console.log('Create product event:', event);
 
-        const product = JSON.parse(event.body);
+        const product = event;
 
         if (
             !product.title ||
