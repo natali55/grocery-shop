@@ -5,6 +5,7 @@ import { DbStack } from '../lib/db-stack';
 import { DeployWebAppStack } from "../lib/deploy-web-app-stack";
 import { ImportServiceStackUnique } from '../lib/import-service-stack';
 import { ProductServiceStack } from '../lib/product-service-stack';
+import { SqsServiceStack } from '../lib/sqs/sqs-service-stack';
 
 const app = new App();
 new DeployWebAppStack(app, "DeployWebAppStack", {
@@ -22,5 +23,6 @@ new DeployWebAppStack(app, "DeployWebAppStack", {
 
 const productServiceStack = new ProductServiceStack(app, "ProductServiceStack", {});
 new DbStack(app, "DbStack", {}, productServiceStack.lambdaFunctions);
-new ImportServiceStackUnique(app, 'ImportServiceStackUnique', {env: { account: '211125589269', region: 'us-east-1' }});
+new ImportServiceStackUnique(app, 'ImportServiceStackUnique', {});
+new SqsServiceStack(app, 'SqsServiceStack', {});
 
