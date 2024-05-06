@@ -3,6 +3,7 @@ import "source-map-support/register";
 import { App, DefaultStackSynthesizer, Stack } from "aws-cdk-lib";
 import { DbStack } from '../lib/db-stack';
 import { DeployWebAppStack } from "../lib/deploy-web-app-stack";
+import { ImportServiceStackUnique } from '../lib/import-service-stack';
 import { ProductServiceStack } from '../lib/product-service-stack';
 
 const app = new App();
@@ -21,4 +22,5 @@ new DeployWebAppStack(app, "DeployWebAppStack", {
 
 const productServiceStack = new ProductServiceStack(app, "ProductServiceStack", {});
 new DbStack(app, "DbStack", {}, productServiceStack.lambdaFunctions);
+new ImportServiceStackUnique(app, 'ImportServiceStackUnique', {env: { account: '211125589269', region: 'us-east-1' }});
 

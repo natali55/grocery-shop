@@ -1,8 +1,5 @@
-import { DynamoDB, DynamoDBClient, PutItemCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { Handler } from 'aws-lambda';
-import { v4 } from 'uuid';
-import { Context } from 'vm';
-import { products } from './products';
 
 
 const dynamoDB: DynamoDBClient = new DynamoDBClient({ region: process.env.AWS_REGION });

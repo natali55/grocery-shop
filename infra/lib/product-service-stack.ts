@@ -5,7 +5,6 @@ import { Construct } from 'constructs';
 import * as path from 'path';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { productsTableName, stockTableName } from '../environments/env';
-import { createProduct } from '../src/product-service/create-product';
 
 export class ProductServiceStack extends Stack {
   public lambdaFunctions: NodejsFunction[] = [];

@@ -10,7 +10,7 @@
     "e2e": "ng e2e",
     "prepare": "husky",
     "lint:format": "npx --no-install lint-staged && npx --no-install pretty-quick --staged",
-    "deploy": "npm run build && cd ../infra && npm run deploy"
+    "deploy": "npm run build && cd ../infra && npm run deploy --all"
   },
   "private": true,
   "dependencies": {
