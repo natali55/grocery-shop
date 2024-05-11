@@ -1,9 +1,12 @@
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
+import { SendMessageCommandInput } from '@aws-sdk/client-sqs/dist-types/commands/SendMessageCommand';
 import { Handler } from 'aws-lambda';
 import csvParser from 'csv-parser';
-import { awsRegion } from '../../environments/env';
 
-const s3Client = new S3Client({ region: awsRegion });
+const s3Client = new S3Client({ region: process.env.AWS_REGION });
+const sqsClient = new SQSClient({ region: process.env.AWS_REGION });
+const queueUrlConstant = process.env.QUEUE_URL;
 
 export const importFileParser: Handler = async (event: any) => {
         try {
@@ -23,7 +26,7 @@ export const importFileParser: Handler = async (event: any) => {
                 const data = await s3Client.send(new GetObjectCommand(getObjectParams));
 
                 // @ts-ignore
-                processStream(data.Body?.pipe(csvParser()));
+                await processStream(data.Body?.pipe(csvParser()), queueUrlConstant);
             }
 
         } catch (err) {
@@ -40,20 +43,43 @@ function getBucketAndKey(record: any) {
 }
 
 
-function processStream(stream: any) {
-    if (stream) {
-        let data = '';
+async function processStream(stream: any, queueUrl: string) {
 
-        stream.on('data', (chunk: any) => {
-            data += chunk;
-            console.log('Parsed row: ', chunk);
-        });
+        return new Promise((resolve, reject) => {
+            const sqsParamsArray: SendMessageCommandInput[] = [];
 
-        stream.on('end', async () => {
-            console.log('File processing finished');
-            console.log('Parsed Data: ', data);
-        });
-    } else {
-        console.error('Stream is undefined');
-    }
+            if (stream) {
+                let data = '';
+                 stream.on('end', async () => {
+                    for (let index = 0; index < sqsParamsArray.length; index++){
+
+                         await sqsClient.send(new SendMessageCommand(sqsParamsArray[index]));
+
+                         console.log('Record string after sqsClient:', sqsParamsArray[index]?.MessageBody);
+
+                     }
+                     console.log('CSV file successfully processed');
+                     resolve('CSV file successfully processed');
+                 });
+
+                stream.on('data', (chunk: any) => {
+
+                    const recordString = JSON.stringify(chunk);
+                    data += recordString;
+
+                    console.log('Record string before sqsClient:', recordString);
+
+                    const sqsParams = {
+                        QueueUrl: queueUrl,
+                        MessageBody: recordString,
+                    };
+
+                    sqsParamsArray.push(sqsParams);
+                });
+            }
+            else {
+                console.error('Stream is undefined');
+                reject('Stream is undefined')
+            }
+        })
 }

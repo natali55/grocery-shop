@@ -22,5 +22,5 @@ new DeployWebAppStack(app, "DeployWebAppStack", {
 
 const productServiceStack = new ProductServiceStack(app, "ProductServiceStack", {});
 new DbStack(app, "DbStack", {}, productServiceStack.lambdaFunctions);
-new ImportServiceStackUnique(app, 'ImportServiceStackUnique', {env: { account: '211125589269', region: 'us-east-1' }});
+new ImportServiceStackUnique(app, 'ImportServiceStackUnique', {});
 
