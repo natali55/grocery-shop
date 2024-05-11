@@ -1,77 +1,85 @@
+import { PublishCommand, SNSClient } from '@aws-sdk/client-sns';
 import { SQSEvent } from "aws-lambda";
 import { v4 as uuidv4 } from 'uuid';
 import { DynamoDBClient, BatchWriteItemCommand } from '@aws-sdk/client-dynamodb';
 import { Product } from './product.model';
 
+const dynamoDBClient = new DynamoDBClient({ region: process.env.AWS_REGION });
+
+const productTableName = process.env.PRODUCT_TABLE_NAME;
+const stockTableName = process.env.STOCK_TABLE_NAME;
+const topicArn = process.env.UPLOAD_TOPIC_ARN;
+const snsClient = new SNSClient({ region: process.env.AWS_REGION})
+
 export const catalogBatchProcess = async (event: SQSEvent) => {
-    const dynamoDBClient = new DynamoDBClient({ region: process.env.AWS_REGION });
-
-    const productTableName = process.env.PRODUCT_TABLE_NAME;
-    const stockTableName = process.env.STOCK_TABLE_NAME;
-
     console.log('SQS Event:', event);
 
     const body: string = event.Records[0].body;
-    const products: Product[] = JSON.parse(body);
+    const product: Product = JSON.parse(body);
 
-    console.log('SQS Products:', products);
+    console.log('SQS Product:', product);
 
-    const productItems = [];
-    const stockItems = [];
+    try {
+        const { title, description, price, count } = product;
 
-    for (const product of products) {
-        try {
-            const { title, description, price, count } = product;
+        if(!title || !description || !price || !count) {
+            console.error('Incomplete product data:', product);
 
-            if(!title || !description || !price || !count) {
-                console.error('Incomplete product data:', product);
-
-                continue;
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ message: 'Wrong product format' }),
             }
-
-            console.log('Product data:', title, description, price, count);
-
-            const productId = uuidv4();
-
-            productItems.push({
-                PutRequest: {
-                    Item: {
-                        id: { S: productId },
-                        title: { S: title },
-                        description: { S: description },
-                        price: { N: price.toString() }
-                    }
-                }
-            });
-
-            stockItems.push({
-                PutRequest: {
-                    Item: {
-                        product_id: { S: productId },
-                        count: { N: count.toString() }
-                    }
-                }
-            });
-
-            console.log('productItems array:', productItems);
-
-            try {
-                const input = {
-                    RequestItems: {
-                        [productTableName]: productItems,
-                        [stockTableName]: stockItems
-                    }
-                }
-
-                const command = new BatchWriteItemCommand(input);
-
-                await dynamoDBClient.send(command);
-
-            } catch(err: any) {
-                console.error('Error while iterating items:', err);
-            }
-        } catch(err: any) {
-            console.error('Error while creating items:', err);
         }
+
+        console.log('Product data:', title, description, price, count);
+
+        const productId = uuidv4();
+        const input = {
+            RequestItems: {
+                [productTableName as string]: [{
+                    PutRequest: {
+                        Item: {
+                            id: { S: productId },
+                            title: { S: title },
+                            description: { S: description },
+                            price: { N: price.toString() }
+                        }
+                    }
+                }],
+                [stockTableName as string]: [{
+                    PutRequest: {
+                        Item: {
+                            product_id: { S: productId },
+                            count: { N: count.toString() }
+                        }
+                    }
+                }]
+            }
+        }
+
+        const command = new BatchWriteItemCommand(input);
+
+        await dynamoDBClient.send(command);
+        await snsClient.send(new PublishCommand({
+            TopicArn: topicArn,
+            Message: JSON.stringify({
+                id: productId,
+                title: title,
+                price: price,
+                description: description,
+                count: count
+            })
+        }))
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify('Product processed')
+        };
+
+    } catch(err: any) {
+        console.error('Error while creating items:', err);
+
+        return { statusCode: 500, body: JSON.stringify(err) }
     }
+
 }
