@@ -2,7 +2,7 @@ import { PublishCommand, SNSClient } from '@aws-sdk/client-sns';
 import { SQSEvent } from "aws-lambda";
 import { v4 as uuidv4 } from 'uuid';
 import { DynamoDBClient, BatchWriteItemCommand } from '@aws-sdk/client-dynamodb';
-import { Product } from './product.model';
+import { Product } from '../../shared/product.model';
 
 const dynamoDBClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 

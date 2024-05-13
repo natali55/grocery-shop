@@ -4,7 +4,8 @@ import { NodejsFunction, SourceMapMode } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import * as path from 'path';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import { productsTableName, stockTableName } from '../environments/env';
+import { productsTableName, stockTableName } from '../../env/env';
+import { lambdaPath } from '../shared/lambdas.config';
 
 export class ProductServiceStack extends Stack {
   public lambdaFunctions: NodejsFunction[] = [];
@@ -14,7 +15,7 @@ export class ProductServiceStack extends Stack {
 
     const lambdaProductsList = new NodejsFunction(this, 'lambda-products-list', {
       functionName: 'getProductsList',
-      entry: path.resolve(__dirname, '../src/product-service/get-products-list.ts'),
+      entry: path.resolve(__dirname, `${lambdaPath}/get-products-list.ts`),
       runtime: lambda.Runtime.NODEJS_18_X,
       memorySize: 1024,
       timeout: Duration.seconds(5),
@@ -32,7 +33,7 @@ export class ProductServiceStack extends Stack {
 
     const lambdaProductsById = new NodejsFunction(this, 'lambda-products-by-id', {
       functionName: 'getProductsById',
-      entry: path.resolve(__dirname, '../src/product-service/get-products-by-id.ts'),
+      entry: path.resolve(__dirname, `${lambdaPath}/get-products-by-id.ts`),
       runtime: lambda.Runtime.NODEJS_18_X,
       memorySize: 1024,
       timeout: Duration.seconds(5),
@@ -50,7 +51,7 @@ export class ProductServiceStack extends Stack {
 
     const lambdaCreateProduct = new NodejsFunction(this, 'lambda-create-product', {
       functionName: 'createProduct',
-      entry: path.resolve(__dirname, '../src/product-service/create-product.ts'),
+      entry: path.resolve(__dirname, `${lambdaPath}/create-product.ts`),
       runtime: lambda.Runtime.NODEJS_18_X,
       memorySize: 1024,
       timeout: Duration.seconds(5),

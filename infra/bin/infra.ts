@@ -1,13 +1,14 @@
 #!/usr/bin/env node
-import "source-map-support/register";
-import { App, DefaultStackSynthesizer, Stack } from "aws-cdk-lib";
+import 'source-map-support/register';
+import { App, DefaultStackSynthesizer, Stack } from 'aws-cdk-lib';
+import { AuthorizationServiceStack } from '../lib/authorization-service/authorization-service-stack';
 import { DbStack } from '../lib/db-stack';
-import { DeployWebAppStack } from "../lib/deploy-web-app-stack";
-import { ImportServiceStackUnique } from '../lib/import-service-stack';
-import { ProductServiceStack } from '../lib/product-service-stack';
+import { DeployWebAppStack } from '../lib/deploy-web-app-stack';
+import { ImportServiceStackUnique } from '../lib/import-service/import-service-stack';
+import { ProductServiceStack } from '../lib/product-service/product-service-stack';
 
 const app = new App();
-new DeployWebAppStack(app, "DeployWebAppStack", {
+new DeployWebAppStack(app, 'DeployWebAppStack', {
     /* If you don't specify 'env', this stack will be environment-agnostic.
      * Account/Region-dependent features and context lookups will not work,
      * but a single synthesized template can be deployed anywhere. */
@@ -20,7 +21,7 @@ new DeployWebAppStack(app, "DeployWebAppStack", {
     /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
 });
 
-const productServiceStack = new ProductServiceStack(app, "ProductServiceStack", {});
-new DbStack(app, "DbStack", {}, productServiceStack.lambdaFunctions);
+const productServiceStack = new ProductServiceStack(app, 'ProductServiceStack', {});
+new DbStack(app, 'DbStack', {}, productServiceStack.lambdaFunctions);
 new ImportServiceStackUnique(app, 'ImportServiceStackUnique', {});
 

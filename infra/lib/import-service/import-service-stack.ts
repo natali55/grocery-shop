@@ -1,5 +1,6 @@
+import { aws_logs } from 'aws-cdk-lib';
 import { SnsDestination } from 'aws-cdk-lib/aws-s3-notifications';
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { SqsEventSource, SqsEventSourceProps } from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
@@ -7,14 +8,22 @@ import * as sns from 'aws-cdk-lib/aws-sns';
 import * as cdk from 'aws-cdk-lib/core';
 import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import { Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib/core';
-import { LambdaIntegration, MockIntegration, PassthroughBehavior, RestApi } from 'aws-cdk-lib/aws-apigateway';
+import {
+    AccessLogFormat, CfnAccount,
+    LambdaIntegration,
+    LogGroupLogDestination,
+    MockIntegration,
+    RestApi,
+    TokenAuthorizer
+} from 'aws-cdk-lib/aws-apigateway';
 import { LambdaDestination } from 'aws-cdk-lib/aws-s3-notifications';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import * as path from 'path';
-import { productsTableName, stockTableName } from '../environments/env';
+import { githubAccountLoginVariable, passwordVariable, productsTableName, stockTableName } from '../../env/env';
+import { lambdaPath } from '../shared/lambdas.config';
 
 export class ImportServiceStackUnique extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
@@ -43,7 +52,7 @@ export class ImportServiceStackUnique extends Stack {
 
 
         const importProductsFileLambda = new NodejsFunction(this, 'importProductsFile', {
-            entry: path.resolve(__dirname, '../src/product-service/import-products-file.ts'),
+            entry: path.resolve(__dirname, `${lambdaPath}/import-products-file.ts`),
             functionName: 'importProductsFile',
             handler: 'importProductsFile',
             memorySize: 1024,
@@ -66,8 +75,39 @@ export class ImportServiceStackUnique extends Stack {
             sourceArn: bucket.bucketArn,
         });
 
+
+        const basicAuthorizerLambda = new NodejsFunction(this, 'basicAuthorizerLambda', {
+            entry: path.resolve(__dirname, `../authorization-service/lambda/basic-authorizer.ts`),
+            functionName: 'basicAuthorizerUnique',
+            handler: 'basicAuthorizerUnique',
+            memorySize: 1024,
+            runtime: lambda.Runtime.NODEJS_18_X,
+            timeout: Duration.seconds(10),
+            bundling: {
+                target: 'esnext'
+            },
+            environment: {
+                [`${githubAccountLoginVariable}`]: passwordVariable,
+            },
+        });
+
+        const tokenAuthorizer: TokenAuthorizer | undefined = basicAuthorizerLambda ? new TokenAuthorizer(this, 'MyAuthorizer', {
+            handler: basicAuthorizerLambda
+        }) : undefined;
+
+        const logGroup = this.createApiGatewayAccessLogsGroup(this);
+
         const importApi = new RestApi(this, 'import-api', {
-            restApiName: "Import Product API Gateway"
+            restApiName: "Import Product API Gateway",
+            defaultMethodOptions: {
+                authorizer: tokenAuthorizer,
+            },
+            deployOptions: {
+                accessLogDestination: new LogGroupLogDestination(
+                    logGroup
+                ),
+                accessLogFormat: AccessLogFormat.jsonWithStandardFields(),
+            }
         });
 
         const lambdaIntegration = new LambdaIntegration(importProductsFileLambda, {
@@ -104,7 +144,8 @@ export class ImportServiceStackUnique extends Stack {
                         'method.response.header.Access-Control-Allow-Methods': true,
                     },
                 },
-            ]
+            ],
+            authorizer: tokenAuthorizer
         });
 
         importResource.addMethod('OPTIONS', new MockIntegration({
@@ -148,7 +189,7 @@ export class ImportServiceStackUnique extends Stack {
 
 
         const importFileParserLambda = new NodejsFunction(this, 'importFileParser', {
-            entry: path.resolve(__dirname, '../src/product-service/import-file-parser.ts'),
+            entry: path.resolve(__dirname, `${lambdaPath}/import-file-parser.ts`),
             functionName: 'importFileParser',
             handler: 'importFileParser',
             memorySize: 1024,
@@ -187,7 +228,7 @@ export class ImportServiceStackUnique extends Stack {
 
 
         const catalogBatchProcessLambdaFunction = new NodejsFunction(this, 'catalogBatchProcess', {
-            entry: path.resolve(__dirname, '../src/product-service/catalog-batch-process.ts'),
+            entry: path.resolve(__dirname, `${lambdaPath}/catalog-batch-process.ts`),
             functionName: 'catalogBatchProcess',
             handler: 'catalogBatchProcess',
             memorySize: 1024,
@@ -226,5 +267,26 @@ export class ImportServiceStackUnique extends Stack {
         }
 
         catalogBatchProcessLambdaFunction.addEventSource(new SqsEventSource(catalogItemsQueue, sqsEventSourceProps));
+    }
+
+    private createApiGatewayAccessLogsGroup(
+        scope: Construct
+    ) {
+        const logGroupName = "apigateway-auth-lambda";
+        const logRetention = new aws_logs.LogRetention(
+            scope,
+            "apiGwLogGroupConstruct",
+            {
+                logGroupName: logGroupName,
+                retention: aws_logs.RetentionDays.ONE_WEEK,
+                removalPolicy: cdk.RemovalPolicy.DESTROY,
+            }
+        );
+        const logGroup = aws_logs.LogGroup.fromLogGroupArn(
+            scope,
+            "apiGwLogGroup",
+            logRetention.logGroupArn
+        );
+        return logGroup;
     }
 }
