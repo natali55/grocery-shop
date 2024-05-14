@@ -3,8 +3,6 @@ import { EMPTY, Observable } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { switchMap } from 'rxjs/operators';
 
-const authorizationToken = localStorage.getItem('authorization_token');
-
 @Injectable()
 export class ManageProductsService extends ApiService {
   uploadProductsCSV(file: File): Observable<unknown> {
@@ -20,9 +18,8 @@ export class ManageProductsService extends ApiService {
         this.http.put(url, file, {
           headers: {
             // eslint-disable-next-line @typescript-eslint/naming-convention
-            'Content-Type': 'text/csv',
-            'Authorization': `Basic ${authorizationToken}`
-          },
+            'Content-Type': 'text/csv'
+          }
         }),
       ),
     );
@@ -31,10 +28,15 @@ export class ManageProductsService extends ApiService {
   private getPreSignedUrl(fileName: string): Observable<string> {
     const url = this.getUrl('import', 'import');
 
+    const authorizationToken = localStorage.getItem('authorization_token');
+
     return this.http.get<string>(url, {
       params: {
         name: fileName,
       },
+      headers: {
+        'Authorization': `Basic ${authorizationToken}`
+      }
     });
   }
 }

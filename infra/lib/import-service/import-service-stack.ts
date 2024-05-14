@@ -9,10 +9,10 @@ import * as cdk from 'aws-cdk-lib/core';
 import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import { Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib/core';
 import {
-    AccessLogFormat, CfnAccount,
+    AccessLogFormat, CfnAccount, IdentitySource,
     LambdaIntegration,
     LogGroupLogDestination,
-    MockIntegration,
+    MockIntegration, ResponseType,
     RestApi,
     TokenAuthorizer
 } from 'aws-cdk-lib/aws-apigateway';
@@ -23,35 +23,35 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import * as path from 'path';
 import { githubAccountLoginVariable, passwordVariable, productsTableName, stockTableName } from '../../env/env';
+import { basicAuthorizer } from '../authorization-service/lambda/basic-authorizer';
 import { lambdaPath } from '../shared/lambdas.config';
 
 export class ImportServiceStackUnique extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
         super(scope, id, props);
 
-        const bucket = new s3.Bucket(this, 'UploadedFilesBucket1', {
+        const bucket = new s3.Bucket(this, 'UploadedFilesBucket2', {
             removalPolicy: RemovalPolicy.DESTROY,
             autoDeleteObjects: true,
-            bucketName: 'uploaded-files-bucket-1',
+            bucketName: 'uploaded-files-bucket-2',
             cors: [
                 {
                     allowedOrigins: [
-                        'http://localhost:4200',
-                        'https://d2ju856t2gddwd.cloudfront.net',
+                        'https://d2ju856t2gddwd.cloudfront.net'
                     ],
                     allowedMethods: [
                         s3.HttpMethods.GET,
                         s3.HttpMethods.PUT,
                         s3.HttpMethods.POST,
-                        s3.HttpMethods.DELETE,
+                        s3.HttpMethods.DELETE
                     ],
-                    allowedHeaders: ['*'],
+                    allowedHeaders: ['*']
                 },
             ],
         });
 
 
-        const importProductsFileLambda = new NodejsFunction(this, 'importProductsFile', {
+        const importProductsFileLambda = new NodejsFunction(this, 'importProductsFile2', {
             entry: path.resolve(__dirname, `${lambdaPath}/import-products-file.ts`),
             functionName: 'importProductsFile',
             handler: 'importProductsFile',
@@ -68,18 +68,18 @@ export class ImportServiceStackUnique extends Stack {
 
         bucket.grantReadWrite(importProductsFileLambda);
 
-        new lambda.CfnPermission(this, 'AllowS3BucketNotification', {
+        new lambda.CfnPermission(this, 'AllowS3BucketNotification2', {
             action: 'lambda:InvokeFunction',
             functionName: importProductsFileLambda.functionName,
             principal: 's3.amazonaws.com',
-            sourceArn: bucket.bucketArn,
+            sourceArn: bucket.bucketArn
         });
 
 
-        const basicAuthorizerLambda = new NodejsFunction(this, 'basicAuthorizerLambda', {
+        const basicAuthorizerLambda = new NodejsFunction(this, 'basicAuthorizerLambda2', {
             entry: path.resolve(__dirname, `../authorization-service/lambda/basic-authorizer.ts`),
-            functionName: 'basicAuthorizerUnique',
-            handler: 'basicAuthorizerUnique',
+            functionName: 'basicAuthorizer',
+            handler: 'basicAuthorizer',
             memorySize: 1024,
             runtime: lambda.Runtime.NODEJS_18_X,
             timeout: Duration.seconds(10),
@@ -91,23 +91,21 @@ export class ImportServiceStackUnique extends Stack {
             },
         });
 
-        const tokenAuthorizer: TokenAuthorizer | undefined = basicAuthorizerLambda ? new TokenAuthorizer(this, 'MyAuthorizer', {
+        const tokenAuthorizer: TokenAuthorizer | undefined = basicAuthorizerLambda ? new TokenAuthorizer(this, 'MyAuthorizer2', {
             handler: basicAuthorizerLambda
         }) : undefined;
 
         const logGroup = this.createApiGatewayAccessLogsGroup(this);
 
-        const importApi = new RestApi(this, 'import-api', {
+        const importApi = new RestApi(this, 'import-api-2', {
             restApiName: "Import Product API Gateway",
-            defaultMethodOptions: {
-                authorizer: tokenAuthorizer,
-            },
             deployOptions: {
                 accessLogDestination: new LogGroupLogDestination(
                     logGroup
                 ),
                 accessLogFormat: AccessLogFormat.jsonWithStandardFields(),
-            }
+            },
+            cloudWatchRole: true
         });
 
         const lambdaIntegration = new LambdaIntegration(importProductsFileLambda, {
@@ -121,7 +119,7 @@ export class ImportServiceStackUnique extends Stack {
             integrationResponses: [{
                 statusCode: '200',
                 responseParameters: {
-                    'method.response.header.Access-Control-Allow-Headers': "'Content-Type'",
+                    'method.response.header.Access-Control-Allow-Headers': "'Content-Type,Authorization'",
                     'method.response.header.Access-Control-Allow-Origin': "'https://d2ju856t2gddwd.cloudfront.net'",
                     'method.response.header.Access-Control-Allow-Methods': "'GET,PUT,OPTIONS'"
                 },
@@ -134,6 +132,11 @@ export class ImportServiceStackUnique extends Stack {
 
         const importResource = importApi.root.addResource('import');
 
+        importResource.addCorsPreflight({
+            allowOrigins: ['https://d2ju856t2gddwd.cloudfront.net'],
+            allowMethods: ['GET', 'OPTIONS']
+        });
+
         importResource.addMethod('GET', lambdaIntegration, {
             methodResponses: [
                 {
@@ -142,43 +145,60 @@ export class ImportServiceStackUnique extends Stack {
                         'method.response.header.Access-Control-Allow-Headers': true,
                         'method.response.header.Access-Control-Allow-Origin': true,
                         'method.response.header.Access-Control-Allow-Methods': true,
-                    },
+                    }
                 },
             ],
             authorizer: tokenAuthorizer
         });
 
-        importResource.addMethod('OPTIONS', new MockIntegration({
-            integrationResponses: [{
-                statusCode: '200',
-                responseParameters: {
-                    'method.response.header.Access-Control-Allow-Headers': "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
-                    'method.response.header.Access-Control-Allow-Origin': "'https://d2ju856t2gddwd.cloudfront.net'",
-                    'method.response.header.Access-Control-Allow-Methods': "'GET,PUT,OPTIONS'"
-                }
-            }],
-            requestTemplates: {
-                'application/json': "{statusCode: 200}"
+
+        importApi.addGatewayResponse('authorization-denied', {
+            type: ResponseType.ACCESS_DENIED,
+            statusCode: '403',
+            responseHeaders: {
+                'Access-Control-Allow-Origin': "'https://d2ju856t2gddwd.cloudfront.net'"
             }
-        }), {
-            methodResponses: [{
-                statusCode: '200',
-                responseParameters: {
-                    'method.response.header.Access-Control-Allow-Headers': true,
-                    'method.response.header.Access-Control-Allow-Origin': true,
-                    'method.response.header.Access-Control-Allow-Methods': true,
-                }
-            }]
-        });
+        })
+
+        importApi.addGatewayResponse('authorization-unauthorized', {
+            type: ResponseType.UNAUTHORIZED,
+            statusCode: '401',
+            responseHeaders: {
+                'Access-Control-Allow-Origin': "'https://d2ju856t2gddwd.cloudfront.net'"
+            }
+        })
+
+        // importResource.addMethod('OPTIONS', new MockIntegration({
+        //     integrationResponses: [{
+        //         statusCode: '200',
+        //         responseParameters: {
+        //             'method.response.header.Access-Control-Allow-Headers': "'Content-Type,Authorization'",
+        //             'method.response.header.Access-Control-Allow-Origin': "'https://d2ju856t2gddwd.cloudfront.net'",
+        //             'method.response.header.Access-Control-Allow-Methods': "'GET,PUT,OPTIONS'"
+        //         }
+        //     }],
+        //     requestTemplates: {
+        //         'application/json': "{statusCode: 200}"
+        //     }
+        // }), {
+        //     methodResponses: [{
+        //         statusCode: '200',
+        //         responseParameters: {
+        //             'method.response.header.Access-Control-Allow-Headers': true,
+        //             'method.response.header.Access-Control-Allow-Origin': true,
+        //             'method.response.header.Access-Control-Allow-Methods': true,
+        //         }
+        //     }]
+        // });
 
         // A dead-letter queue (it helps capture any failed messages).
-        const deadLetterQueue = new sqs.Queue(this, 'catalogItemsDeadLetterQueue', {
+        const deadLetterQueue = new sqs.Queue(this, 'catalogItemsDeadLetterQueue2', {
             queueName: 'catalogItemsDeadLetterQueue',
             retentionPeriod: Duration.days(7)
         });
 
         // Create a SQS Queue.
-        const catalogItemsQueue = new sqs.Queue(this, 'catalogItemsQueue', {
+        const catalogItemsQueue = new sqs.Queue(this, 'catalogItemsQueue2', {
             queueName: 'catalogItemsQueue',
             visibilityTimeout: Duration.seconds(10),
             deadLetterQueue: {
@@ -188,7 +208,7 @@ export class ImportServiceStackUnique extends Stack {
         });
 
 
-        const importFileParserLambda = new NodejsFunction(this, 'importFileParser', {
+        const importFileParserLambda = new NodejsFunction(this, 'importFileParser2', {
             entry: path.resolve(__dirname, `${lambdaPath}/import-file-parser.ts`),
             functionName: 'importFileParser',
             handler: 'importFileParser',
@@ -214,8 +234,8 @@ export class ImportServiceStackUnique extends Stack {
         catalogItemsQueue.grantSendMessages(importFileParserLambda);
 
         // Create a SNS Topic.
-        const uploadEventTopic = new sns.Topic(this, 'CsvUploadEventTopic', {
-            topicName: 'CsvUploadEventTopic'
+        const uploadEventTopic = new sns.Topic(this, 'CsvUploadEventTopic2', {
+            topicName: 'CsvUploadEventTopic2'
         });
 
 
@@ -227,7 +247,7 @@ export class ImportServiceStackUnique extends Stack {
         uploadEventTopic.addSubscription(new snsSubscriptions.EmailSubscription('natasha.epam@gmail.com'));
 
 
-        const catalogBatchProcessLambdaFunction = new NodejsFunction(this, 'catalogBatchProcess', {
+        const catalogBatchProcessLambdaFunction = new NodejsFunction(this, 'catalogBatchProcess2', {
             entry: path.resolve(__dirname, `${lambdaPath}/catalog-batch-process.ts`),
             functionName: 'catalogBatchProcess',
             handler: 'catalogBatchProcess',
@@ -272,10 +292,10 @@ export class ImportServiceStackUnique extends Stack {
     private createApiGatewayAccessLogsGroup(
         scope: Construct
     ) {
-        const logGroupName = "apigateway-auth-lambda";
+        const logGroupName = "apigateway-auth-lambda-2";
         const logRetention = new aws_logs.LogRetention(
             scope,
-            "apiGwLogGroupConstruct",
+            "apiGwLogGroupConstruct2",
             {
                 logGroupName: logGroupName,
                 retention: aws_logs.RetentionDays.ONE_WEEK,
@@ -284,7 +304,7 @@ export class ImportServiceStackUnique extends Stack {
         );
         const logGroup = aws_logs.LogGroup.fromLogGroupArn(
             scope,
-            "apiGwLogGroup",
+            "apiGwLogGroup2",
             logRetention.logGroupArn
         );
         return logGroup;

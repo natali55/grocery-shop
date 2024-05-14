@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import { App, DefaultStackSynthesizer, Stack } from 'aws-cdk-lib';
-import { AuthorizationServiceStack } from '../lib/authorization-service/authorization-service-stack';
 import { DbStack } from '../lib/db-stack';
 import { DeployWebAppStack } from '../lib/deploy-web-app-stack';
 import { ImportServiceStackUnique } from '../lib/import-service/import-service-stack';

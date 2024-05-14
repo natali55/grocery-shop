@@ -1,11 +1,11 @@
 import { APIGatewayTokenAuthorizerEvent } from 'aws-lambda';
 
-export const basicAuthorizerUnique = async (event: APIGatewayTokenAuthorizerEvent) => {
+export const basicAuthorizer = async (event: APIGatewayTokenAuthorizerEvent) => {
     console.log('EVENT:', event)
 
     if (!event.authorizationToken) {
         return {
-            statusCode: 401,
+            statusCode: '401',
             body: 'Unauthorized'
         };
     }
@@ -16,12 +16,18 @@ export const basicAuthorizerUnique = async (event: APIGatewayTokenAuthorizerEven
     const plainCredentials = (Buffer.from(encodedCredentials, 'base64')).toString('utf8');
     const [username, password] = plainCredentials.split(':');
 
+    console.log('username', username);
+    console.log('password', password);
+
     const storedUserPassword = process.env[username];
+
+    console.log('storedUserPassword', storedUserPassword);
+
     const effect = !storedUserPassword || storedUserPassword !== password ? 'Deny' : 'Allow';
 
     if (effect === 'Deny') {
         return {
-            statusCode: 403,
+            statusCode: '403',
             body: 'Forbidden'
         };
     }

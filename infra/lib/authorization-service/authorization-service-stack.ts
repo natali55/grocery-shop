@@ -8,12 +8,12 @@ import { githubAccountLoginVariable, passwordVariable } from '../../env/env';
 import { lambdaPath } from '../shared/lambdas.config';
 
 export class AuthorizationServiceStack extends Stack {
-  public readonly basicAuthorizerLambdaNew;
+  public readonly basicAuthorizerLambda;
 
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    this.basicAuthorizerLambdaNew = new NodejsFunction(this, 'basicAuthorizerLambdaNew', {
+    this.basicAuthorizerLambda = new NodejsFunction(this, 'basicAuthorizerLambdaNew', {
       entry: path.resolve(__dirname, `${lambdaPath}/basic-authorizer.ts`),
       functionName: 'basicAuthorizer',
       handler: 'basicAuthorizer',
