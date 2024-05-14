@@ -152,7 +152,7 @@ export class ImportServiceStackUnique extends Stack {
         });
 
 
-        importApi.addGatewayResponse('authorization-denied', {
+        importApi.addGatewayResponse('authorization-forbidden', {
             type: ResponseType.ACCESS_DENIED,
             statusCode: '403',
             responseHeaders: {
