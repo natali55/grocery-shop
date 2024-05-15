@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { authToken } from '../../env/env';
 import { HeaderComponent } from './core/header/header.component';
 
 @Component({
