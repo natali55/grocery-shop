@@ -2,7 +2,7 @@ import { DynamoDBClient, PutItemCommand, ScanCommand } from '@aws-sdk/client-dyn
 import { Handler } from 'aws-lambda';
 import { v4 } from 'uuid';
 import { Context } from 'vm';
-import { awsRegion, productsTableName, stockTableName } from '../../environments/env';
+import { awsRegion, productsTableName, stockTableName } from '../../env/env';
 import { products } from './products-db';
 
 const dynamoDB: DynamoDBClient = new DynamoDBClient({ region: awsRegion });

@@ -2,7 +2,7 @@ import { SQSEvent } from "aws-lambda";
 import { DynamoDBClient, BatchWriteItemCommand } from '@aws-sdk/client-dynamodb';
 import { PublishCommand, SNSClient } from '@aws-sdk/client-sns';
 import { v4 as uuidv4 } from 'uuid';
-import { catalogBatchProcess } from '../src/product-service/catalog-batch-process';
+import { catalogBatchProcess } from '../lib/import-service/lambda/catalog-batch-process';
 
 jest.mock('@aws-sdk/client-dynamodb');
 jest.mock('@aws-sdk/client-sns');

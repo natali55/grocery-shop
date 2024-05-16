@@ -4,7 +4,7 @@ import {
 } from '@aws-sdk/client-dynamodb';
 import { Handler } from 'aws-lambda';
 import { v4 } from 'uuid';
-import { Product } from './product.model';
+import { Product } from '../../shared/product.model';
 
 const dynamoDB: DynamoDBClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 const productsTableName: string = process.env.PRODUCTS_TABLE_NAME as string;
