@@ -5,6 +5,7 @@ import { DbStack } from '../lib/db-stack';
 import { DeployWebAppStack } from '../lib/deploy-web-app-stack';
 import { ImportServiceStackUnique } from '../lib/import-service/import-service-stack';
 import { ProductServiceStack } from '../lib/product-service/product-service-stack';
+import { RdsServiceStack } from '../lib/rds-service/rds-service-stack';
 
 const app = new App();
 new DeployWebAppStack(app, 'DeployWebAppStack', {
@@ -23,4 +24,5 @@ new DeployWebAppStack(app, 'DeployWebAppStack', {
 const productServiceStack = new ProductServiceStack(app, 'ProductServiceStack', {});
 new DbStack(app, 'DbStack', {}, productServiceStack.lambdaFunctions);
 new ImportServiceStackUnique(app, 'ImportServiceStackUnique', {});
+new RdsServiceStack(app, 'InfraRdsServiceStack', {});
 
